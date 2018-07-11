@@ -63,7 +63,7 @@ class WiFiGenericClass
     static wifi_mode_t _forceSleepLastMode;
 
   public:
-    int hostByName(const char *aHostname, IPAddress &aResult);
+    static int hostByName(const char *aHostname, IPAddress &aResult);
 
   protected:
     friend class WiFiSTAClass;
