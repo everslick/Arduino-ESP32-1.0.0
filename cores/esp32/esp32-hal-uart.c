@@ -420,7 +420,7 @@ int log_printf(const char *format, ...)
     vsnprintf(temp, len+1, format, arg);
 #if !CONFIG_DISABLE_HAL_LOCKS
     if(_uart_bus_array[s_uart_debug_nr].lock){
-        while (xSemaphoreTake(_uart_bus_array[s_uart_debug_nr].lock, portMAX_DELAY) != pdPASS);
+        xSemaphoreTake(_uart_bus_array[s_uart_debug_nr].lock, portMAX_DELAY);
         ets_printf("%s", temp);
         xSemaphoreGive(_uart_bus_array[s_uart_debug_nr].lock);
     } else {
@@ -430,7 +430,7 @@ int log_printf(const char *format, ...)
     ets_printf("%s", temp);
 #endif
     va_end(arg);
-    if(len > 64){
+    if(len >= sizeof(loc_buf)){
         free(temp);
     }
     return len;
