@@ -82,7 +82,11 @@ unsigned long IRAM_ATTR micros()
 
 unsigned long IRAM_ATTR millis()
 {
-    return xTaskGetTickCount() * portTICK_PERIOD_MS;
+    //return xTaskGetTickCount() * portTICK_PERIOD_MS;
+
+    // https://github.com/espressif/arduino-esp32/issues/2430
+    // https://github.com/espressif/arduino-esp32/pull/2438
+    return (unsigned long) (esp_timer_get_time() / 1000ULL);
 }
 
 void delay(uint32_t ms)

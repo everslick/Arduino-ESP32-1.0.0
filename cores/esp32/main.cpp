@@ -14,7 +14,8 @@ void loopTask(void *pvParameters)
 {
     setup();
     for(;;) {
-        micros(); //update overflow
+        // https://github.com/espressif/arduino-esp32/commit/93c45af25640435f78532cc621ea159f525e502a#diff-94536ff8ccf321f988ffa45f021f7137
+        //micros(); //update overflow
         loop();
     }
 }
@@ -22,7 +23,7 @@ void loopTask(void *pvParameters)
 extern "C" void app_main()
 {
     initArduino();
-    xTaskCreatePinnedToCore(loopTask, "loopTask", 8192, NULL, 1, NULL, ARDUINO_RUNNING_CORE);
+    xTaskCreatePinnedToCore(loopTask, "loopTask", 12*1024, NULL, 1, NULL, ARDUINO_RUNNING_CORE);
 }
 
 #endif
