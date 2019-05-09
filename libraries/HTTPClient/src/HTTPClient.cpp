@@ -712,11 +712,11 @@ String HTTPClient::errorToString(int error)
     case HTTPC_ERROR_NO_HTTP_SERVER:
         return F("no HTTP server");
     case HTTPC_ERROR_TOO_LESS_RAM:
-        return F("too less ram");
+        return F("not enough ram");
     case HTTPC_ERROR_ENCODING:
-        return F("Transfer-Encoding not supported");
+        return F("encoding not supported");
     case HTTPC_ERROR_STREAM_WRITE:
-        return F("Stream write error");
+        return F("stream write error");
     case HTTPC_ERROR_READ_TIMEOUT:
         return F("read Timeout");
     default:
