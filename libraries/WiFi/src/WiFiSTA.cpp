@@ -453,6 +453,11 @@ String WiFiSTAClass::SSID() const
     wifi_ap_record_t info;
     if(!esp_wifi_sta_get_ap_info(&info)) {
         return String(reinterpret_cast<char*>(info.ssid));
+    } else{
+        wifi_config_t conf;
+        if (!esp_wifi_get_config(WIFI_IF_STA, &conf)) {
+          return String(reinterpret_cast<char*>(conf.sta.ssid));
+        }
     }
     return String();
 }
