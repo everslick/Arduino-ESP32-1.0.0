@@ -58,7 +58,7 @@ public:
     void restart();
     uint32_t getFreeHeap();
     uint8_t getChipRevision();
-    uint32_t getCpuFreqMHz() { return getCpuFrequencyMhz(); }
+    uint32_t getCpuFreqMHz() { return CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ; }
     uint32_t getCycleCount();
     const char * getSdkVersion();
 
