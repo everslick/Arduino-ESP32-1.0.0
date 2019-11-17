@@ -63,10 +63,10 @@ static xQueueHandle _network_event_queue;
 static TaskHandle_t _network_event_task_handle = NULL;
 
 static void _network_event_task(void * arg){
-    system_event_t *event = NULL;
+    system_event_t event;
     for (;;) {
         if(xQueueReceive(_network_event_queue, &event, portMAX_DELAY) == pdTRUE){
-            WiFiGenericClass::_eventCallback(arg, event);
+            WiFiGenericClass::_eventCallback(arg, &event);
         }
     }
     vTaskDelete(NULL);
@@ -74,7 +74,7 @@ static void _network_event_task(void * arg){
 }
 
 static esp_err_t _network_event_cb(void *arg, system_event_t *event){
-    if (xQueueSend(_network_event_queue, &event, portMAX_DELAY) != pdPASS) {
+    if (xQueueSend(_network_event_queue, event, portMAX_DELAY) != pdPASS) {
         log_w("Network Event Queue Send Failed!");
         return ESP_FAIL;
     }
@@ -83,7 +83,7 @@ static esp_err_t _network_event_cb(void *arg, system_event_t *event){
 
 static void _start_network_event_task(){
     if(!_network_event_queue){
-        _network_event_queue = xQueueCreate(32, sizeof(system_event_t *));
+        _network_event_queue = xQueueCreate(32, sizeof(system_event_t));
         if(!_network_event_queue){
             log_e("Network Event Queue Create Failed!");
             return;
