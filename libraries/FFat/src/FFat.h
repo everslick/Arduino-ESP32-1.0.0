@@ -19,7 +19,7 @@
 
 #define FFAT_WIPE_QUICK 0
 #define FFAT_WIPE_FULL 1
-#define FFAT_PARTITION_LABEL "ffat"
+#define FFAT_PARTITION_LABEL "spiffs"
 
 namespace fs
 {
