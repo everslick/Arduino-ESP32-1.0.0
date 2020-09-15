@@ -1,3 +1,5 @@
+This is a fork of the original ESP32 Arduino core prior to it's 1.0.0 release. With Version 1.0.0 came PSRAM support and IDF 3.3 and this increased flash size requirements significantly. Nevertheless, some later bugfixes that went into upstream arduino-esp32 where backported to this fork.
+
 # Arduino core for ESP32 WiFi chip
 
 [![Build Status](https://travis-ci.org/espressif/arduino-esp32.svg?branch=master)](https://travis-ci.org/espressif/arduino-esp32)
