@@ -247,6 +247,8 @@ int send_ssl_data(sslclient_context *ssl_client, const uint8_t *data, uint16_t l
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret < 0) {
             return handle_error(ret);
         }
+        //wait for space to become available
+        vTaskDelay(5/portTICK_PERIOD_MS);
     }
 
     return ret;
