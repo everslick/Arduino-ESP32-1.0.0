@@ -290,7 +290,7 @@ String & String::operator =(const char *cstr) {
     return *this;
 }
 
-String & String::operator = (const __FlashStringHelper *pstr)
+String & String::operator =(const __FlashStringHelper *pstr)
 {
     if (pstr) copy(pstr, strlen_P((PGM_P)pstr));
     else invalidate();
@@ -298,11 +298,17 @@ String & String::operator = (const __FlashStringHelper *pstr)
     return *this;
 }
 
+String & String::operator =(char c) {
+    char buffer[2] { c, '\0' };
+    *this = buffer;
+    return *this;
+}
+
 // /*********************************************/
 // /*  concat                                   */
 // /*********************************************/
 
-unsigned char String::concat(const String &s) {
+bool String::concat(const String &s) {
     // Special case if we're concatting ourself (s += s;) since we may end up
     // realloc'ing the buffer and moving s.buffer in the method called
     if (&s == this) {
@@ -322,7 +328,7 @@ unsigned char String::concat(const String &s) {
     }
 }
 
-unsigned char String::concat(const char *cstr, unsigned int length) {
+bool String::concat(const char *cstr, unsigned int length) {
     unsigned int newlen = len() + length;
     if(!cstr)
         return 0;
@@ -340,62 +346,62 @@ unsigned char String::concat(const char *cstr, unsigned int length) {
     return 1;
 }
 
-unsigned char String::concat(const char *cstr) {
+bool String::concat(const char *cstr) {
     if(!cstr)
         return 0;
     return concat(cstr, strlen(cstr));
 }
 
-unsigned char String::concat(char c) {
+bool String::concat(char c) {
     char buf[2];
     buf[0] = c;
     buf[1] = 0;
     return concat(buf, 1);
 }
 
-unsigned char String::concat(unsigned char num) {
+bool String::concat(unsigned char num) {
     char buf[1 + 3 * sizeof(unsigned char)];
     sprintf(buf, "%d", num);
     return concat(buf, strlen(buf));
 }
 
-unsigned char String::concat(int num) {
+bool String::concat(int num) {
     char buf[2 + 3 * sizeof(int)];
     sprintf(buf, "%d", num);
     return concat(buf, strlen(buf));
 }
 
-unsigned char String::concat(unsigned int num) {
+bool String::concat(unsigned int num) {
     char buf[1 + 3 * sizeof(unsigned int)];
     utoa(num, buf, 10);
     return concat(buf, strlen(buf));
 }
 
-unsigned char String::concat(long num) {
+bool String::concat(long num) {
     char buf[2 + 3 * sizeof(long)];
     sprintf(buf, "%ld", num);
     return concat(buf, strlen(buf));
 }
 
-unsigned char String::concat(unsigned long num) {
+bool String::concat(unsigned long num) {
     char buf[1 + 3 * sizeof(unsigned long)];
     ultoa(num, buf, 10);
     return concat(buf, strlen(buf));
 }
 
-unsigned char String::concat(float num) {
+bool String::concat(float num) {
     char buf[20];
     char* string = dtostrf(num, 4, 2, buf);
     return concat(string, strlen(string));
 }
 
-unsigned char String::concat(double num) {
+bool String::concat(double num) {
     char buf[20];
     char* string = dtostrf(num, 4, 2, buf);
     return concat(string, strlen(string));
 }
 
-unsigned char String::concat(const __FlashStringHelper * str) {
+bool String::concat(const __FlashStringHelper * str) {
     if (!str) return 0;
     int length = strlen_P((PGM_P)str);
     if (length == 0) return 1;
@@ -503,11 +509,11 @@ int String::compareTo(const String &s) const {
     return strcmp(buffer(), s.buffer());
 }
 
-unsigned char String::equals(const String &s2) const {
+bool String::equals(const String &s2) const {
     return (len() == s2.len() && compareTo(s2) == 0);
 }
 
-unsigned char String::equals(const char *cstr) const {
+bool String::equals(const char *cstr) const {
     if(len() == 0)
         return (cstr == NULL || *cstr == 0);
     if(cstr == NULL)
@@ -515,23 +521,27 @@ unsigned char String::equals(const char *cstr) const {
     return strcmp(buffer(), cstr) == 0;
 }
 
-unsigned char String::operator<(const String &rhs) const {
+bool String::equals(const __FlashStringHelper *s) const {
+    return equals(String(s));
+}
+
+bool String::operator<(const String &rhs) const {
     return compareTo(rhs) < 0;
 }
 
-unsigned char String::operator>(const String &rhs) const {
+bool String::operator>(const String &rhs) const {
     return compareTo(rhs) > 0;
 }
 
-unsigned char String::operator<=(const String &rhs) const {
+bool String::operator<=(const String &rhs) const {
     return compareTo(rhs) <= 0;
 }
 
-unsigned char String::operator>=(const String &rhs) const {
+bool String::operator>=(const String &rhs) const {
     return compareTo(rhs) >= 0;
 }
 
-unsigned char String::equalsIgnoreCase(const String &s2) const {
+bool String::equalsIgnoreCase(const String &s2) const {
     if(this == &s2)
         return 1;
     if(len() != s2.len())
@@ -547,7 +557,11 @@ unsigned char String::equalsIgnoreCase(const String &s2) const {
     return 1;
 }
 
-unsigned char String::equalsConstantTime(const String &s2) const {
+bool String::equalsIgnoreCase(const __FlashStringHelper *s) const {
+    return equalsIgnoreCase(String(s));
+}
+
+bool String::equalsConstantTime(const String &s2) const {
     // To avoid possible time-based attacks present function
     // compares given strings in a constant time.
     if(len() != s2.len())
@@ -574,22 +588,38 @@ unsigned char String::equalsConstantTime(const String &s2) const {
     return (equalcond & diffcond); //bitwise AND
 }
 
-unsigned char String::startsWith(const String &s2) const {
+bool String::startsWith(const String &s2) const {
     if(len() < s2.len())
         return 0;
     return startsWith(s2, 0);
 }
 
-unsigned char String::startsWith(const String &s2, unsigned int offset) const {
+bool String::startsWith(const char *prefix) const {
+    return this->startsWith(String(prefix));
+}
+
+bool String::startsWith(const __FlashStringHelper *prefix) const {
+    return this->startsWith(String(prefix));
+}
+
+bool String::startsWith(const String &s2, unsigned int offset) const {
     if(offset > (unsigned)(len() - s2.len()) || !buffer() || !s2.buffer())
         return 0;
     return strncmp(&buffer()[offset], s2.buffer(), s2.len()) == 0;
 }
 
-unsigned char String::endsWith(const String &s2) const {
+bool String::endsWith(const String &s2) const {
     if(len() < s2.len() || !buffer() || !s2.buffer())
         return 0;
     return strcmp(&buffer()[len() - s2.len()], s2.buffer()) == 0;
+}
+
+bool String::endsWith(const char * suffix) const {
+    return this->endsWith(String(suffix));
+}
+
+bool String::endsWith(const __FlashStringHelper * suffix) const {
+    return this->endsWith(String(suffix));
 }
 
 // /*********************************************/
@@ -700,6 +730,14 @@ int String::lastIndexOf(const String &s2, unsigned int fromIndex) const {
     return found;
 }
 
+int String::lastIndexOf(const __FlashStringHelper *str) const {
+    return lastIndexOf(String(str));
+}
+
+int String::lastIndexOf(const __FlashStringHelper *str, unsigned int fromIndex) const {
+    return lastIndexOf(String(str), fromIndex);
+}
+
 String String::substring(unsigned int left, unsigned int right) const {
     if(left > right) {
         unsigned int temp = right;
@@ -768,13 +806,29 @@ void String::replace(const String& find, const String& replace) {
         while(index >= 0 && (index = lastIndexOf(find, index)) >= 0) {
             readFrom = wbuffer() + index + find.len();
             memmove(readFrom + diff, readFrom, len() - (readFrom - buffer()));
-	    int newLen = len() + diff;
+	          int newLen = len() + diff;
             memmove(wbuffer() + index, replace.buffer(), replace.len());
             setLen(newLen);
             wbuffer()[newLen] = 0;
             index--;
         }
     }
+}
+
+void String::replace(const char *find, const String &replace) {
+    this->replace(String(find), replace);
+}
+void String::replace(const __FlashStringHelper *find, const String &replace) {
+    this->replace(String(find), replace);
+}
+void String::replace(const char *find, const char *replace) {
+    this->replace(String(find), String(replace));
+}
+void String::replace(const __FlashStringHelper *find, const char *replace) {
+    this->replace(String(find), String(replace));
+}
+void String::replace(const __FlashStringHelper *find, const __FlashStringHelper *replace) {
+    this->replace(String(find), String(replace));
 }
 
 void String::remove(unsigned int index) {
