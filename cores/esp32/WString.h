@@ -75,7 +75,7 @@ class String {
         // return true on success, false on failure (in which case, the string
         // is left unchanged).  reserve(0), if successful, will validate an
         // invalid string (i.e., "if (s)" will be true afterwards)
-        unsigned char reserve(unsigned int size);
+        bool reserve(unsigned int size);
         inline unsigned int length(void) const {
             if(buffer()) {
                 return len();
@@ -96,7 +96,7 @@ class String {
         String & operator =(const String &rhs);
         String & operator =(const char *cstr);
         String & operator =(const __FlashStringHelper *str);
-        String & operator =(char c);
+        //String & operator =(char c); // XXX compiler bug ???
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
         String & operator =(String &&rval);
         String & operator =(StringSumHelper &&rval);
@@ -107,10 +107,10 @@ class String {
         // returns true on success, false on failure (in which case, the string
         // is left unchanged).  if the argument is null or invalid, the
         // concatenation is considered unsuccessful.
-        bool concat(const String &s);
+        bool concat(const String &str);
         bool concat(const char *cstr);
         bool concat(char c);
-        bool concat(unsigned char num);
+        bool concat(unsigned char c);
         bool concat(int num);
         bool concat(unsigned int num);
         bool concat(long num);
@@ -210,10 +210,11 @@ class String {
         bool equalsConstantTime(const String &s) const;
         bool startsWith(const String &prefix) const;
         bool startsWith(const char * prefix) const;
-        bool startsWith(const __FlashStringHelper *prefix) const;
+        bool startsWith(const __FlashStringHelper * prefix) const;
         bool startsWith(const String &prefix, unsigned int offset) const;
+        bool startsWith(const __FlashStringHelper *prefix, unsigned int offset) const;
         bool endsWith(const char * suffix) const;
-        bool endsWith(const __FlashStringHelper *suffix) const;
+        bool endsWith(const __FlashStringHelper * suffix) const;
         bool endsWith(const String &suffix) const;
 
         // character access
@@ -265,7 +266,7 @@ class String {
         // parsing/conversion
         long toInt(void) const;
         float toFloat(void) const;
-	double toDouble(void) const;
+        double toDouble(void) const;
 
     protected:
         // Contains the string info when we're not in SSO mode
@@ -301,7 +302,7 @@ class String {
     protected:
         void init(void);
         void invalidate(void);
-        unsigned char changeBuffer(unsigned int maxStrLen);
+        bool changeBuffer(unsigned int maxStrLen);
         bool concat(const char *cstr, unsigned int length);
 
         // copy and move
