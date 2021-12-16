@@ -38,6 +38,7 @@ static int handle_error(int err)
 
 void ssl_init(sslclient_context *ssl_client)
 {
+    memset(ssl_client, 0, sizeof(sslclient_context));
     mbedtls_ssl_init(&ssl_client->ssl_ctx);
     mbedtls_ssl_config_init(&ssl_client->ssl_conf);
     mbedtls_ctr_drbg_init(&ssl_client->drbg_ctx);
@@ -138,6 +139,7 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
         ret = mbedtls_pk_parse_key(&ssl_client->client_key, (const unsigned char *)cli_key, strlen(cli_key) + 1, NULL, 0);
 
         if (ret != 0) {
+            mbedtls_x509_crt_free(&ssl_client->client_cert); // cert+key are free'd in pair
             return handle_error(ret);
         }
 
@@ -149,7 +151,7 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
     // Hostname set here should match CN in server certificate
     if((ret = mbedtls_ssl_set_hostname(&ssl_client->ssl_ctx, host)) != 0){
         return handle_error(ret);
-	}
+    }
 
     mbedtls_ssl_conf_rng(&ssl_client->ssl_conf, mbedtls_ctr_drbg_random, &ssl_client->drbg_ctx);
 
@@ -165,7 +167,7 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
             return handle_error(ret);
         }
-	vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 
 
@@ -184,7 +186,7 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
         bzero(buf, sizeof(buf));
         mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", flags);
         log_e("Failed to verify peer certificate! verification info: %s", buf);
-        stop_ssl_socket(ssl_client, rootCABuff, cli_cert, cli_key);  //It's not safe continue.
+        //stop_ssl_socket(ssl_client, rootCABuff, cli_cert, cli_key);  //It's not safe continue.
         return handle_error(ret);
     } else {
         log_v("Certificate verified.");
@@ -216,11 +218,19 @@ void stop_ssl_socket(sslclient_context *ssl_client, const char *rootCABuff, cons
         close(ssl_client->socket);
         ssl_client->socket = -1;
     }
-
+    // avoid memory leak if ssl connection attempt failed
+    if (ssl_client->ssl_conf.ca_chain != NULL) {
+        mbedtls_x509_crt_free(&ssl_client->ca_cert);
+    }
+    if (ssl_client->ssl_conf.key_cert != NULL) {
+        mbedtls_x509_crt_free(&ssl_client->client_cert);
+        mbedtls_pk_free(&ssl_client->client_key);
+    }
     mbedtls_ssl_free(&ssl_client->ssl_ctx);
     mbedtls_ssl_config_free(&ssl_client->ssl_conf);
     mbedtls_ctr_drbg_free(&ssl_client->drbg_ctx);
     mbedtls_entropy_free(&ssl_client->entropy_ctx);
+    memset(ssl_client, 0, sizeof(sslclient_context));
 }
 
 
