@@ -36,6 +36,8 @@ WiFiClientSecure::WiFiClientSecure()
     ssl_init(sslclient);
     sslclient->socket = -1;
 
+    _timeout = 30000;
+
     _CA_cert = NULL;
     _cert = NULL;
     _private_key = NULL;
@@ -50,6 +52,8 @@ WiFiClientSecure::WiFiClientSecure(int sock)
     sslclient = new sslclient_context;
     ssl_init(sslclient);
     sslclient->socket = sock;
+
+    _timeout = 30000;
 
     if (sock >= 0) {
         _connected = true;
@@ -164,7 +168,7 @@ int WiFiClientSecure::read(uint8_t *buf, size_t size)
         _peek = -1;
         return data;
     }
-    
+
     if (!available()) {
         return -1;
     }
@@ -183,7 +187,7 @@ int WiFiClientSecure::available()
     int res = data_to_read(sslclient);
     if (res < 0 ) {
         stop();
-    }    
+    }
     return res;
 }
 
@@ -225,4 +229,30 @@ int WiFiClientSecure::lastError(char *buf, const size_t size)
     }
     mbedtls_strerror(_lastError, buf, size);
     return _lastError;
+}
+
+int WiFiClientSecure::setTimeout(uint32_t seconds)
+{
+    _timeout = seconds * 1000;
+    if (sslclient->socket >= 0) {
+        struct timeval tv;
+        tv.tv_sec = seconds;
+        tv.tv_usec = 0;
+        if(setSocketOption(SO_RCVTIMEO, (char *)&tv, sizeof(struct timeval)) < 0) {
+            return -1;
+        }
+        return setSocketOption(SO_SNDTIMEO, (char *)&tv, sizeof(struct timeval));
+    }
+    else {
+        return 0;
+    }
+}
+
+int WiFiClientSecure::setSocketOption(int option, char* value, size_t len)
+{
+    int res = setsockopt(sslclient->socket, SOL_SOCKET, option, value, len);
+    if(res < 0) {
+        log_e("%X : %d", option, errno);
+    }
+    return res;
 }

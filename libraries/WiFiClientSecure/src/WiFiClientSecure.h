@@ -29,9 +29,9 @@ class WiFiClientSecure : public WiFiClient
 {
 protected:
     sslclient_context *sslclient;
- 
+
     int _lastError = 0;
-	int _peek = -1;
+    int _peek = -1;
     const char *_CA_cert;
     const char *_cert;
     const char *_private_key;
@@ -45,7 +45,7 @@ public:
     int connect(const char *host, uint16_t port);
     int connect(IPAddress ip, uint16_t port, const char *rootCABuff, const char *cli_cert, const char *cli_key);
     int connect(const char *host, uint16_t port, const char *rootCABuff, const char *cli_cert, const char *cli_key);
-	int peek();
+    int peek();
     size_t write(uint8_t data);
     size_t write(const uint8_t *buf, size_t size);
     int available();
@@ -59,6 +59,9 @@ public:
     void setCertificate(const char *client_ca);
     void setPrivateKey (const char *private_key);
     bool verify(const char* fingerprint, const char* domain_name);
+
+    int setTimeout(uint32_t seconds);
+    int setSocketOption(int option, char* value, size_t len);
 
     operator bool()
     {
