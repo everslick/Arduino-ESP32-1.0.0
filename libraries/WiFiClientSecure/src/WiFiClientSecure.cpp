@@ -36,8 +36,6 @@ WiFiClientSecure::WiFiClientSecure()
     ssl_init(sslclient);
     sslclient->socket = -1;
 
-    _timeout = 30000;
-
     _CA_cert = NULL;
     _cert = NULL;
     _private_key = NULL;
@@ -52,8 +50,6 @@ WiFiClientSecure::WiFiClientSecure(int sock)
     sslclient = new sslclient_context;
     ssl_init(sslclient);
     sslclient->socket = sock;
-
-    _timeout = 30000;
 
     if (sock >= 0) {
         _connected = true;
@@ -233,7 +229,6 @@ int WiFiClientSecure::lastError(char *buf, const size_t size)
 
 int WiFiClientSecure::setTimeout(uint32_t seconds)
 {
-    _timeout = seconds * 1000;
     if (sslclient->socket >= 0) {
         struct timeval tv;
         tv.tv_sec = seconds;
