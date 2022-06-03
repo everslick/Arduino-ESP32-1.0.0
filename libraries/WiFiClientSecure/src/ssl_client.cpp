@@ -45,10 +45,10 @@ void ssl_init(sslclient_context *ssl_client)
 }
 
 
-int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t port, const char *rootCABuff, const char *cli_cert, const char *cli_key)
+int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t port, int timeout, const char *rootCABuff, const char *cli_cert, const char *cli_key)
 {
     char buf[512];
-    int ret, flags, timeout;
+    int ret, flags;
     int enable = 1;
     log_v("Free heap before TLS %u", xPortGetFreeHeapSize());
 
@@ -68,7 +68,7 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
         return -1;
     }
     IPAddress srv((const uint8_t *)(server->h_addr));
-	
+
     struct sockaddr_in serv_addr;
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
@@ -76,9 +76,12 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
     serv_addr.sin_port = htons(port);
 
     if (lwip_connect(ssl_client->socket, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == 0) {
-        timeout = 30000;
-        lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-        lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+        if(timeout <= 0){
+          timeout = 15000;
+        }
+        timeval so_timeout = { .tv_sec = timeout / 1000, .tv_usec = (timeout % 1000) * 1000 };
+        lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_RCVTIMEO, &so_timeout, sizeof(so_timeout));
+        lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_SNDTIMEO, &so_timeout, sizeof(so_timeout));
         lwip_setsockopt(ssl_client->socket, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
         lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable));
     } else {
@@ -163,13 +166,14 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
 
     log_v("Performing the SSL/TLS handshake...");
 
+    unsigned long start=millis();
     while ((ret = mbedtls_ssl_handshake(&ssl_client->ssl_ctx)) != 0) {
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
             return handle_error(ret);
         }
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        if ((millis() - start) > 25000) return -1;
+        vTaskDelay(2);
     }
-
 
     if (cli_cert != NULL && cli_key != NULL) {
         log_d("Protocol is %s Ciphersuite is %s", mbedtls_ssl_get_version(&ssl_client->ssl_ctx), mbedtls_ssl_get_ciphersuite(&ssl_client->ssl_ctx));
@@ -191,7 +195,7 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
     } else {
         log_v("Certificate verified.");
     }
-    
+
     if (rootCABuff != NULL) {
         mbedtls_x509_crt_free(&ssl_client->ca_cert);
     }
@@ -202,7 +206,7 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
 
     if (cli_key != NULL) {
         mbedtls_pk_free(&ssl_client->client_key);
-    }    
+    }
 
     log_v("Free heap after TLS %u", xPortGetFreeHeapSize());
 
@@ -218,6 +222,7 @@ void stop_ssl_socket(sslclient_context *ssl_client, const char *rootCABuff, cons
         close(ssl_client->socket);
         ssl_client->socket = -1;
     }
+
     // avoid memory leak if ssl connection attempt failed
     if (ssl_client->ssl_conf.ca_chain != NULL) {
         mbedtls_x509_crt_free(&ssl_client->ca_cert);
@@ -226,10 +231,12 @@ void stop_ssl_socket(sslclient_context *ssl_client, const char *rootCABuff, cons
         mbedtls_x509_crt_free(&ssl_client->client_cert);
         mbedtls_pk_free(&ssl_client->client_key);
     }
+
     mbedtls_ssl_free(&ssl_client->ssl_ctx);
     mbedtls_ssl_config_free(&ssl_client->ssl_conf);
     mbedtls_ctr_drbg_free(&ssl_client->drbg_ctx);
     mbedtls_entropy_free(&ssl_client->entropy_ctx);
+
     memset(ssl_client, 0, sizeof(sslclient_context));
 }
 
@@ -249,16 +256,20 @@ int data_to_read(sslclient_context *ssl_client)
 }
 
 
-int send_ssl_data(sslclient_context *ssl_client, const uint8_t *data, uint16_t len)
+int send_ssl_data(sslclient_context *ssl_client, const uint8_t *data, uint16_t len, int timeout)
 {
     int ret = -1;
 
+    unsigned long start = millis();
     while ((ret = mbedtls_ssl_write(&ssl_client->ssl_ctx, data, len)) <= 0) {
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret < 0) {
             return handle_error(ret);
         }
+
+        if ((millis() - start) > timeout) return -1;
+
         //wait for space to become available
-        vTaskDelay(5/portTICK_PERIOD_MS);
+        vTaskDelay(2);
     }
 
     return ret;

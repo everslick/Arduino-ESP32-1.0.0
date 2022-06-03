@@ -31,6 +31,7 @@
 WiFiClientSecure::WiFiClientSecure()
 {
     _connected = false;
+    _timeout = 15000;
 
     sslclient = new sslclient_context;
     ssl_init(sslclient);
@@ -39,6 +40,7 @@ WiFiClientSecure::WiFiClientSecure()
     _CA_cert = NULL;
     _cert = NULL;
     _private_key = NULL;
+
     next = NULL;
 }
 
@@ -46,6 +48,7 @@ WiFiClientSecure::WiFiClientSecure()
 WiFiClientSecure::WiFiClientSecure(int sock)
 {
     _connected = false;
+    _timeout = 15000;
 
     sslclient = new sslclient_context;
     ssl_init(sslclient);
@@ -58,6 +61,7 @@ WiFiClientSecure::WiFiClientSecure(int sock)
     _CA_cert = NULL;
     _cert = NULL;
     _private_key = NULL;
+
     next = NULL;
 }
 
@@ -102,7 +106,13 @@ int WiFiClientSecure::connect(IPAddress ip, uint16_t port, const char *_CA_cert,
 
 int WiFiClientSecure::connect(const char *host, uint16_t port, const char *_CA_cert, const char *_cert, const char *_private_key)
 {
-    int ret = start_ssl_client(sslclient, host, port, _CA_cert, _cert, _private_key);
+    int timeout = _timeout;
+
+    if (timeout <= 0) {
+      timeout = 25000;
+    }
+
+    int ret = start_ssl_client(sslclient, host, port, timeout, _CA_cert, _cert, _private_key);
     _lastError = ret;
     if (ret < 0) {
         log_e("lwip_connect_r: %d", errno);
@@ -148,11 +158,20 @@ size_t WiFiClientSecure::write(const uint8_t *buf, size_t size)
     if (!_connected) {
         return 0;
     }
-    int res = send_ssl_data(sslclient, buf, size);
+
+    int timeout = _timeout;
+
+    if (timeout <= 0) {
+      timeout = 15000;
+    }
+
+    int res = send_ssl_data(sslclient, buf, size, timeout);
+
     if (res < 0) {
         stop();
         res = 0;
     }
+
     return res;
 }
 
@@ -229,6 +248,8 @@ int WiFiClientSecure::lastError(char *buf, const size_t size)
 
 int WiFiClientSecure::setTimeout(uint32_t seconds)
 {
+    _timeout = seconds * 1000;
+
     if (sslclient->socket >= 0) {
         struct timeval tv;
         tv.tv_sec = seconds;
